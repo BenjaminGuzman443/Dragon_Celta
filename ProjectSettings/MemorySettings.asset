@@ -25,8 +25,7 @@ MemorySettings:
     m_BackgroundJobTempAllocatorBlockSize: -1
     m_JobTempAllocatorReducedBlockSize: -1
     m_TempAllocatorSizeGIBakingWorker: -1
-    m_TempAllocatorSizeNavMeshWorker: -1
-    m_TempAllocatorSizeAudioWorker: -1
+      m_TempAllocatorSizeAudioWorker: -1
     m_TempAllocatorSizeCloudWorker: -1
     m_TempAllocatorSizeGfx: -1
     m_TempAllocatorSizeJobWorker: -1

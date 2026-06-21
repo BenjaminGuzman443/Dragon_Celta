@@ -1,0 +1,4 @@
+repository "DragonCeltas/DragonCeltas@4674196397498@cloud"
+  path "/"
+    br "/main1"
+    co "/main1"
