@@ -198,7 +198,7 @@ MonoBehaviour:
   linearDrag: 5
   mass: 10
   attackDuration: 0.4
-  attackDamage: 6
+  attackDamage: 8
   attackCooldown: 2
   postAttackFreeze: 0.3
   attackRange: 1.5
@@ -209,6 +209,7 @@ MonoBehaviour:
     camuflajeRango: 8
     camuflajeTransparencia: 0.3
     avariciaActivo: 0
+    coleraActivo: 0
   maxHp: 80
   xpAlMorir: 12
   oroMin: 10
