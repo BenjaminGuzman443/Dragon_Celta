@@ -96,23 +96,18 @@ namespace DragonCeltas
 
         public void SetMaxHpPorcentaje(float porcentaje)
         {
-            float aumento = maxHp * (porcentaje / 100f);
-            maxHp += aumento;
-            maxHpOriginal += aumento;
+            maxHp += maxHp * (porcentaje / 100f);
         }
 
         public void SetMaxHp(float newMax)
         {
-            float diff = newMax - maxHp;
             maxHp = newMax;
-            maxHpOriginal += diff;
         }
 
         public void Heal(float amount)
         {
-            bool teniaEscudo = hp > maxHpOriginal;
             hp += amount;
-            if (!extasisActivo && !teniaEscudo && hp > maxHp) hp = maxHp;
+            if (!extasisActivo && hp > maxHp) hp = maxHp;
         }
 
         public void AplicarEscudo(float multiplicador)

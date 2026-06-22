@@ -14,15 +14,16 @@ namespace DragonCeltas
         [SerializeField] private float ataque1Damage = 15f;
         [SerializeField] private float ataque1Cooldown = 1.5f;
         [SerializeField] private float ataque1Rango = 3f;
-        [SerializeField] private float ataque1Delay = 0.3f;
 
-        [Header("Ataque 2 - Aliento de Fuego")]
+        [Header("Ataque 2 - Escupitajo de Fuego")]
         [SerializeField] private float ataque2Damage = 10f;
         [SerializeField] private float ataque2Cooldown = 3f;
-        [SerializeField] private float ataque2Rango = 6f;
-        [SerializeField] private float ataque2Delay = 0.5f;
-        [SerializeField] private float zonaFuegoDuracion = 4f;
-        [SerializeField] private float zonaFuegoTick = 0.5f;
+        [SerializeField] private float ataque2RangoMin = 4f;
+        [SerializeField] private float ataque2RangoMax = 10f;
+        [SerializeField] private float velocidadProyectil = 5f;
+        [SerializeField] private float tiempoVidaProyectil = 4f;
+        [SerializeField] private float radioProyectil = 0.4f;
+        [SerializeField] private Color colorProyectil = new Color(1f, 0.4f, 0f, 1f);
         [SerializeField] private GameObject prefabFuegoSuelo;
 
         [Header("Aturdimiento")]
@@ -66,8 +67,6 @@ namespace DragonCeltas
 
         private bool estaAturdido;
         private float stunnTimer;
-        private int stunsRecientes;
-        private float stunCooldownTimer;
 
         private float danoBaseAtaque1;
         private float danoBaseAtaque2;
@@ -84,6 +83,19 @@ namespace DragonCeltas
             rb.mass = mass;
             rb.gravityScale = 0f;
             rb.constraints = RigidbodyConstraints2D.FreezeRotation;
+
+            var triggerCol = GetComponent<CircleCollider2D>();
+            if (triggerCol != null)
+            {
+                var solidCol = gameObject.AddComponent<CircleCollider2D>();
+                solidCol.radius = triggerCol.radius;
+                solidCol.isTrigger = false;
+
+                var physMat = new PhysicsMaterial2D("EnemySlide");
+                physMat.friction = 0f;
+                physMat.bounciness = 0f;
+                solidCol.sharedMaterial = physMat;
+            }
 
             animator = GetComponent<Animator>();
         }
@@ -132,13 +144,6 @@ namespace DragonCeltas
         {
             if (hp <= 0f) return;
 
-            if (stunCooldownTimer > 0f)
-            {
-                stunCooldownTimer -= Time.deltaTime;
-                if (stunCooldownTimer <= 0f)
-                    stunsRecientes = 0;
-            }
-
             if (estaAturdido)
             {
                 stunnTimer -= Time.deltaTime;
@@ -165,18 +170,13 @@ namespace DragonCeltas
 
             float dist = Vector2.Distance(transform.position, currentTarget.position);
 
-            if (dist <= ataque1Rango && ataque1CooldownTimer <= 0f)
+            if (dist <= ataque1Rango)
             {
                 Ataque1();
             }
-            else if (dist <= ataque2Rango && ataque2CooldownTimer <= 0f)
+            else if (dist >= ataque2RangoMin && dist <= ataque2RangoMax)
             {
                 Ataque2();
-            }
-            else if (dist <= ataque1Rango || dist <= ataque2Rango)
-            {
-                rb.linearVelocity = Vector2.zero;
-                animator.SetBool("IsRunning", false);
             }
             else
             {
@@ -184,9 +184,6 @@ namespace DragonCeltas
                 rb.linearVelocity = dirMov * moveSpeed;
                 animator.SetBool("IsRunning", true);
             }
-
-            ataque1CooldownTimer -= Time.deltaTime;
-            ataque2CooldownTimer -= Time.deltaTime;
 
             AplicarAvariciaStats();
             FlipSprite();
@@ -219,24 +216,23 @@ namespace DragonCeltas
         {
             rb.linearVelocity = Vector2.zero;
             animator.SetBool("IsRunning", false);
-            ataque1CooldownTimer = ataque1Cooldown;
-            animator.SetTrigger("Attack1");
-            StartCoroutine(DanoConDelay(ataque1Delay));
-        }
+            ataque1CooldownTimer -= Time.deltaTime;
 
-        private System.Collections.IEnumerator DanoConDelay(float delay)
-        {
-            yield return new WaitForSeconds(delay);
-
-            if (currentCastleHealth != null)
-                currentCastleHealth.TakeDamage(ataque1Damage);
-            else if (currentPlayerHealth != null)
+            if (ataque1CooldownTimer <= 0f)
             {
-                currentPlayerHealth.TakeDamage(ataque1Damage);
-                if (efectosSecundarios.venenoActivo)
-                    currentPlayerHealth.AplicarVeneno(efectosSecundarios.duracionVeneno);
-                if (efectosSecundarios.camuflajeActivo)
-                    reveladoTimer = 3f;
+                ataque1CooldownTimer = ataque1Cooldown;
+                animator.SetTrigger("Attack1");
+
+                if (currentCastleHealth != null)
+                    currentCastleHealth.TakeDamage(ataque1Damage);
+                else if (currentPlayerHealth != null)
+                {
+                    currentPlayerHealth.TakeDamage(ataque1Damage);
+                    if (efectosSecundarios.venenoActivo)
+                        currentPlayerHealth.AplicarVeneno(efectosSecundarios.duracionVeneno);
+                    if (efectosSecundarios.camuflajeActivo)
+                        reveladoTimer = 3f;
+                }
             }
         }
 
@@ -244,26 +240,60 @@ namespace DragonCeltas
         {
             rb.linearVelocity = Vector2.zero;
             animator.SetBool("IsRunning", false);
-            ataque2CooldownTimer = ataque2Cooldown;
-            animator.SetTrigger("Attack2");
-            StartCoroutine(AlientoFuegoConDelay());
+            ataque2CooldownTimer -= Time.deltaTime;
+
+            if (ataque2CooldownTimer <= 0f)
+            {
+                ataque2CooldownTimer = ataque2Cooldown;
+                animator.SetTrigger("Attack2");
+                DispararFuego();
+            }
         }
 
-        private System.Collections.IEnumerator AlientoFuegoConDelay()
+        private void DispararFuego()
         {
-            yield return new WaitForSeconds(ataque2Delay);
-            AlientoFuego();
+            Vector2 direccion = ((Vector2)(currentTarget.position - transform.position)).normalized;
+
+            var go = new GameObject("Fireball");
+            go.transform.position = transform.position;
+
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = CrearCirculo(radioProyectil);
+            sr.color = colorProyectil;
+            sr.sortingOrder = 50;
+
+            var col = go.AddComponent<CircleCollider2D>();
+            col.radius = radioProyectil;
+            col.isTrigger = true;
+
+            var rbProy = go.AddComponent<Rigidbody2D>();
+            rbProy.gravityScale = 0f;
+            rbProy.linearVelocity = direccion * velocidadProyectil;
+            rbProy.bodyType = RigidbodyType2D.Kinematic;
+
+            var proy = go.AddComponent<ProyectilEnemigo>();
+            float venenoDur = efectosSecundarios.venenoActivo ? efectosSecundarios.duracionVeneno : 0f;
+            proy.InicializarConEfecto(direccion, velocidadProyectil, ataque2Damage, venenoDur, tiempoVidaProyectil, prefabFuegoSuelo);
         }
 
-        private void AlientoFuego()
+        private Sprite CrearCirculo(float radius)
         {
-            Vector3 posicion = currentTarget != null ? currentTarget.position : transform.position;
+            int size = 32;
+            var tex = new Texture2D(size, size);
+            Vector2 center = new Vector2(size / 2f, size / 2f);
+            float pixelRadius = size / 2f;
 
-            var zonaGO = new GameObject("ZonaFuego");
-            zonaGO.transform.position = posicion;
-            var zona = zonaGO.AddComponent<ZonaFuego>();
-            zona.Inicializar(ataque2Rango, ataque2Damage, zonaFuegoTick, zonaFuegoDuracion,
-                efectosSecundarios.venenoActivo, efectosSecundarios.duracionVeneno, prefabFuegoSuelo);
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float dist = Vector2.Distance(new Vector2(x, y), center);
+                    tex.SetPixel(x, y, dist <= pixelRadius ? Color.white : Color.clear);
+                }
+            }
+            tex.Apply();
+
+            return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), size / (radius * 2f));
         }
 
         private void FlipSprite()
@@ -351,18 +381,9 @@ namespace DragonCeltas
 
             if (hp > 0f)
             {
-                if (stunCooldownTimer <= 0f)
-                    stunsRecientes = 0;
-
-                if (stunsRecientes < 2)
-                {
-                    animator.SetTrigger("Hit");
-                    estaAturdido = true;
-                    stunnTimer = duracionStun;
-                    stunsRecientes++;
-                    if (stunCooldownTimer <= 0f)
-                        stunCooldownTimer = 5f;
-                }
+                animator.SetTrigger("Hit");
+                estaAturdido = true;
+                stunnTimer = duracionStun;
             }
 
             if (hp <= 0f)

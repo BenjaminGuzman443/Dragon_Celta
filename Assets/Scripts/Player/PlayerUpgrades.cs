@@ -49,11 +49,8 @@ namespace DragonCeltas
 
         private void HandleScoreGained(int points)
         {
-            var portal = FindAnyObjectByType<PortalManager>();
-            int multiplicador = portal != null ? portal.MultiplicadorXp : 1;
-
             float bonus = playerCombat != null ? playerCombat.bonusXp / 100f : 0f;
-            int total = points * multiplicador + Mathf.RoundToInt(points * multiplicador * bonus);
+            int total = points + Mathf.RoundToInt(points * bonus);
             Score += total;
             if (!isChoosingUpgrade && Score >= nextUpgradeScore)
                 ActivarMejora();
@@ -146,7 +143,7 @@ namespace DragonCeltas
         private void OnBuffElegido(BuffInfo buff)
         {
             isChoosingUpgrade = false;
-            nextUpgradeScore += 5;
+            nextUpgradeScore *= 2;
             Time.timeScale = 1f;
 
             if (buff == null) return;

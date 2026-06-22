@@ -7,15 +7,8 @@ namespace DragonCeltas
     {
         [SerializeField] private Spawner[] spawners;
 
-        [Header("Ciclo de Portales")]
-        [SerializeField] private float duracionCiclo = 300f;
-
         private float tiempoPartida;
-        private float tiempoCiclo;
         private bool pausado = true;
-        private int multiplicadorXp = 1;
-
-        public int MultiplicadorXp => multiplicadorXp;
 
         public string DificultadActual
         {
@@ -25,7 +18,7 @@ namespace DragonCeltas
                 if (mins < 4) return "Fácil";
                 if (mins < 8) return "Normal";
                 if (mins < 12) return "Difícil";
-                if (mins < 14) return "Locura";
+                if (mins < 16) return "Locura";
                 return "UN DRAGON";
             }
         }
@@ -56,8 +49,6 @@ namespace DragonCeltas
         public void IniciarTodos()
         {
             pausado = false;
-            tiempoCiclo = 0f;
-            multiplicadorXp = 1;
             foreach (var s in spawners)
                 if (s != null) s.Activar();
         }
@@ -105,16 +96,9 @@ namespace DragonCeltas
             if (pausado) return;
 
             tiempoPartida += Time.deltaTime;
-            tiempoCiclo += Time.deltaTime;
-
-            if (tiempoCiclo >= duracionCiclo)
-            {
-                tiempoCiclo = 0f;
-                multiplicadorXp *= 2;
-            }
 
             foreach (var s in spawners)
-                if (s != null) s.Actualizar(tiempoCiclo);
+                if (s != null) s.Actualizar(tiempoPartida);
         }
     }
 }
